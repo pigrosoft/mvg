@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -e
+
+cd ..
+
+echo "==> Configurazione upstream (se non esiste)"
+git remote get-url upstream >/dev/null 2>&1 || \
+git remote add upstream git@github.com:rism-digital/verovio.git
+
+echo "==> Rimuovo /dist da ignore (se presente)"
+if grep -q "^/dist" .gitignore 2>/dev/null; then
+  sed -i.bak '/^\/dist/d' .gitignore
+fi
+
+echo "==> Traccio .gitignore aggiornato"
+git add .gitignore || true
+git commit -m "Allow dist tracking" || true
+
+echo "==> Aggiungo dist se esiste in working tree"
+if [ -d "dist" ]; then
+  git add dist || true
+  git commit -m "Track dist" || true
+fi
+
+echo "==> Configuro merge driver per .gitignore"
+git config merge.ours.driver true
+
+echo "==> Imposto .gitattributes"
+if ! grep -q ".gitignore merge=ours" .gitattributes 2>/dev/null; then
+  echo ".gitignore merge=ours" >> .gitattributes
+  git add .gitattributes
+  git commit -m "Protect .gitignore from upstream" || true
+fi
+
+echo "==> Setup completato"
